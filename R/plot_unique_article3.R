@@ -18,24 +18,35 @@ library(data.table)
 
 #  2) READ gps ----
 
-filepath_sp <- list.files("bra_spo/"
+filepath_sp <- list.files("../proj_emis_routes/data/gps/cur/"
                           ,full.names = TRUE)
-
-gps_dt <- readr::read_rds("bra_spo/51007.rds") %>%
+"../emission_routes/"
+i = 
+  
+  gps_dt <- data.table::fread("../proj_emis_routes/data/gps/cur/1708.txt") %>%
   .[!is.na(departure_time),]
 
 # gps_dt
-# 
-# gps_line <- sfheaders::sf_linestring(obj = gps_dt,x = "shape_pt_lon",y = "shape_pt_lat"
-#                                      ,linestring_id = "trip_number",keep = FALSE) %>%
-#   sf::st_set_crs(4326)
-# 
-# mapview(gps_line$geometry)
-# 
-# gps_int <- sf::st_intersects(gps_line,sparse = FALSE)
-# 
-# shape_inter1 <- unique(gps_line$shape_id)[gps_int[1,]]
-# shape_path1 <- sprintf("bra_spo/%s.rds",shape_inter1)
+# [1] "44331" "51954" "52085" "52135" "52145" "52149" "52251" "52253" "52254" "52256"
+# [11] "52259" "52321" "52341" "52349" "52421" "52736" "52913" "52977" "53387" "54008"
+# [21] "54010" "54023" "54038" "54060" "54211" "54224" "54699" "55383" "55567" "55786"
+# [31] "56541" "56676" "57222" "57469" "57587" "58051" "58052" "58079" "58460" "58463"
+# [41] "58466" "58487" "58634" "58642" "58993" "59000" "59336" "59395" "59454" "59474"
+# [51] "59560" "59592" "59593" "59609" "59613" "59760" "59766" "59768" "59770" "59778"
+# [61] "59802" "59912" "60000" "60298" "60344" "60416" "60535" "60610" "60769" "60831"
+# [71] "61027" "61028" "61032" "61119" "61158" "61168" "61170" "61300" "61322" "61387"
+# [81] "61515" "61668" "61692" "61797" "61801" "61802" "61953" "61954" "62000" "62074"
+# [91] "62234" "62322" "62494" "62505" "62512" "62534" "62540" "62557" "62595" "62601"
+# [101] "62727" "62755" "62839" "62840" "62854" "63062" "63063" "63100" "63105" "63134"
+# [111] "63140" "63431" "63477" "63532" "63555" "63684" "63747" "63754" "63767" "63785"
+# [121] "63834" "64000" "64060" "64061" "64103" "64293" "64351" "64550" "64723" "64886"
+# [131] "65028" "65029" "65032" "65209" "65281" "65291" "65292" "68299" "68303" "68304"
+# [141] "68435" "68553" "68633" "68634" "68659" "68769" "68975" "69021" "69085" "69170"
+# [151] "69201" "69346" "69365" "69374" "69384" "69426" "69457" "69474" "69478" "69484"
+# [161] "69509" "69634" "69647" "69832" "70076" "70078" "70079" "70153" "70155" "70159"
+# [171] "70172" "70203" "70294" "70334" "70358" "70385" "70389" "70390" "70417" "70590"
+# [181] "70620" "70628" "70629" "70665" "70688" "70772" "70774" "70775" "70785" "70786"
+# [191] "70789" "70808" "70812" "70829" "70842"
 
 #gps <- gps_dt[shape_id %in% shape_inter1[1:10]]
 #readr::write_rds(gps,"sample_sp.rds")
@@ -46,25 +57,17 @@ gps_dt <- readr::read_rds("bra_spo/51007.rds") %>%
 #gps <- readr::read_rds("bra_spo//51007.rds")
 # deal with midnight trips
 tmp_gps <- data.table::copy(gps_dt) %>%
-  .[trip_number %in% round(seq(1,max(trip_number),length.out = 30))] %>% 
   .[!is.na(departure_time),] %>%
-  .[,time := as.numeric(departure_time)] %>% 
-  .[,time1 := data.table::shift(time,1,NA,"lead"),by = trip_number] %>%
-  .[,diff := time1 - time] 
+  .[,time := data.table::as.ITime(departure_time) %>% as.numeric()] 
 
-midnight_trips <- tmp_gps[diff<0]$trip_number %>% unique()
+#midnight_trips <- tmp_gps[diff<0]$trip_number %>% unique()
 
 tmp_gps <- data.table::copy(tmp_gps) %>%
-  .[!is.na(departure_time),] %>%
-  .[!(trip_number %in% midnight_trips),] %>% # exclude midnight trips
-  .[,time := as.numeric(departure_time)] %>%
   .[,shape_pt_lon_end := data.table::shift(shape_pt_lon,-1,NA), by = shape_id] %>%
   .[,shape_pt_lat_end := data.table::shift(shape_pt_lat,-1,NA), by = shape_id]
 
 tmp_stops <- data.table::copy(tmp_gps) %>%
-  #.[trip_number == 1,] %>%  
   .[!is.na(cumtime) & !is.na(stop_id) & !is.na(departure_time),] %>%  
-  .[,time := as.numeric(departure_time)] %>% 
   .[,altitude := 100 * time/max(time)] %>% 
   data.table::setnames(.,old = c("shape_pt_lon","shape_pt_lat")
                        , new = c("X","Y"))
@@ -135,7 +138,7 @@ view_osm_bbox+view_tmp_stops
 
 # 3.1) crop ----
 
-elev_img <- raster::raster("data-raw/spo/topografia3_spo.tif")
+elev_img <- raster::raster("data/topografia3_cur.tif")
 
 elev_img <- raster::crop(x = elev_img,y = raster::extent(tmp_gps_bbox))
 # elev_zoom_mat <- rayshader::raster_to_matrix(elev_img)
@@ -193,57 +196,47 @@ plot_gg(list_plot, height = nrow(base_map)/200
 
 
 scale_altitude <- 1
-tmp_gps[, new_scale_altitude := ( time - 0 ) * scale_altitude]
+tmp_gps[, new_scale_altitude := ( time - min(time) ) * scale_altitude]
 # tmp_gps$new_scale_altitude <- (tmp_gps$time)
 
 scale_color_shape_id <- viridis::viridis(n = 3)
 unique_shape_id <- unique(tmp_stops$shape_id)
 for(i in seq_along(unique_shape_id)){# i = unique(tmp_gps$shape_id)[1]
   
-  unique_trip_id <- unique(tmp_gps[shape_id == unique_shape_id[i]]$trip_number)
   
-  for(j in unique_trip_id){ # j = unique_trip_id[1]
-    
-    rayshader::render_path(extent = raster::extent(elev_img)
-                           , lat = tmp_gps[trip_number == j & shape_id == unique_shape_id[i],]$shape_pt_lat
-                           , long = tmp_gps[trip_number == j & shape_id == unique_shape_id[i],]$shape_pt_lon
-                           , altitude = tmp_gps[trip_number == j & shape_id == unique_shape_id[i],]$new_scale_altitude,
-                           zscale = 100, linewidth = 2
-                           , clear_previous = F
-                           , color = "black"
-                           #, color = scale_color_shape_id[i]
-    )
-    
-  }
+  
+  rayshader::render_path(extent = raster::extent(elev_img)
+                         , lat = tmp_gps[shape_id == unique_shape_id[i],]$shape_pt_lat
+                         , long = tmp_gps[shape_id == unique_shape_id[i],]$shape_pt_lon
+                         , altitude = tmp_gps[shape_id == unique_shape_id[i],]$new_scale_altitude,
+                         zscale = 100, linewidth = 3
+                         , clear_previous = T
+                         , color = "black")
 }
+  #, color = scale_color_shape_id[i]
 ### 2 downrender
 for(i in seq_along(unique_shape_id)){# i = unique(tmp_gps$shape_id)[1]
   
-  unique_trip_id <- unique(tmp_gps[shape_id == unique_shape_id[i]]$trip_number)
   
-  for(j in unique_trip_id){ # j = unique_trip_id[1]
-    
-    rayshader::render_path(extent = raster::extent(elev_img)
-                           , lat = tmp_gps[trip_number == j & shape_id == unique_shape_id[i],]$shape_pt_lat
-                           , long = tmp_gps[trip_number == j & shape_id == unique_shape_id[i],]$shape_pt_lon
-                           , altitude = 150,
-                           zscale = 100, linewidth = 1
-                           , clear_previous = F
-                           , color = "black"
-                           #, color = scale_color_shape_id[i]
-    )
-    
-  }
+  rayshader::render_path(extent = raster::extent(elev_img)
+                         , lat = tmp_gps[shape_id == unique_shape_id[i],]$shape_pt_lat
+                         , long = tmp_gps[shape_id == unique_shape_id[i],]$shape_pt_lon
+                         , altitude = 150,
+                         zscale = 100, linewidth = 1
+                         , clear_previous = F
+                         , color = "black"
+                         #, color = scale_color_shape_id[i]
+  )
 }
 tmp_stops_id <- data.table::copy(tmp_stops)[shape_id %in% unique(tmp_gps$shape_id)]
-tmp_stops_id[, new_scale_altitude := ( time - 0 ) * scale_altitude]
+tmp_stops_id[, new_scale_altitude := ( time - min(time) ) * scale_altitude]
 tmp_stops_id[,N := .N,by = stop_id]
 #  tmp_stops_id$new_scale_altitude <- (tmp_stops_id$time)
 
 rayshader::render_points(extent = raster::extent(elev_img),
                          lat = tmp_stops_id$Y, long = tmp_stops_id$X,
                          altitude = tmp_stops_id$new_scale_altitude,
-                         size = 4.5, zscale = 100,
+                         size = 6.5, zscale = 100,
                          clear_previous = TRUE, color = "red")
 
 
@@ -255,21 +248,20 @@ for(i in seq_along(unique_shape_id)){
   tmp_stops1 <- tmp_stops1[shape_id == unique_shape_id[i],]
   #tmp_stops1[, new_scale_altitude := ( time )]
   
-  for(j in tail(tmp_stops1$trip_number,1)){ #  j = unique(tmp_stops1$trip_number)[1]
+  
+  tmp_stops2 <- data.table::copy(tmp_stops1)[shape_id == unique_shape_id[i],]
+  
+  for(k in 1:uniqueN(tmp_stops2$stop_id)){
+    rayshader::render_points(extent = raster::extent(elev_img),
+                             lat  = tmp_stops2[,Y][k],
+                             long = tmp_stops2[,X][k],
+                             altitude = 1:(tmp_stops2[,new_scale_altitude][k]),
+                             size = 0.5, zscale = 100,
+                             clear_previous = F
+                             #, color = scale_color_shape_id[i]
+                             , color = "black"
+    )
     
-    tmp_stops2 <- data.table::copy(tmp_stops1)[shape_id == unique_shape_id[i] & trip_number == j,]
-    
-    for(k in 1:uniqueN(tmp_stops2$stop_id)){
-      rayshader::render_points(extent = raster::extent(elev_img),
-                               lat  = tmp_stops2[,Y][k],
-                               long = tmp_stops2[,X][k],
-                               altitude = 1:(tmp_stops2[,new_scale_altitude][k]),
-                               size = 0.5, zscale = 100,
-                               clear_previous = F
-                               #, color = scale_color_shape_id[i]
-                               , color = "black"
-      )
-    }
   }
 }
 
