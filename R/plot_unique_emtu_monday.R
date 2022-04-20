@@ -18,9 +18,7 @@ library(data.table)
 
 #  2) READ gps ----
 
-# sp_gtfs <- gtfs2gps::read_gtfs("data/gtfs_spo_emtu_2019-10.zip") %>%
-#   gtfs2gps::filter_by_shape_id("423032_ida")
-# gtfs2gps::write_gtfs(sp_gtfs,"data/gtfs_spo_emtu_2019-10_423032_ida.zip")
+
 
 sp_gtfs <- gtfs2gps::read_gtfs("data/gtfs_spo_emtu_2019-10_423032_ida.zip")
 

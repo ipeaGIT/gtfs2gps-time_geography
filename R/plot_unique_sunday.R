@@ -49,7 +49,7 @@ time_start = "05:00:00"
 time_end = "10:00:00"
 
 gps_dt <- rbind(sp_gps_1[,day := "monday"], sp_gps_2[,day := "sunday"]) %>% 
-  .[day == "sunday"] %>% 
+  .[day == "monday"] %>% 
   .[!is.na(timestamp)] %>% 
   .[,timestamp := data.table::as.ITime(timestamp)] %>% 
   .[,timestart := timestamp[1],by = .(trip_number,day)] %>% 
@@ -205,11 +205,12 @@ rgl::clear3d()
 plot_gg(list_plot, height = nrow(base_map)/200
         , width = ncol(base_map)/200, scale = 100
         , raytrace = FALSE, windowsize = c(1200, 1200),
-        fov = 70.000000, zoom = 0.525966 
+        fov = 70.000000, zoom = 0.4327136 
         , theta = 269.911531, phi = 11.972998
         ,  max_error = 0.001, verbose = TRUE) 
 
-
+rayshader::render_camera()
+rayshader::ren
 scale_altitude <- 5
 tmp_gps1 <- data.table::copy(tmp_gps)
 tmp_gps1[, new_scale_altitude := ( time - min(time)) * scale_altitude]
@@ -323,9 +324,9 @@ rayshader::render_label(heightmap = elev_img
                         , long = tmp_stops1[,.SD[1],by = trip_number]$X
                         , altitude = tmp_stops1[,.SD[1],by = trip_number]$new_scale_altitude
                         , zscale = 100
-                        , textsize = 1.5
+                        , textsize = 2.5
                         , linewidth = 3
-                        , adjustvec = -c(3.5,0.5)
+                        , adjustvec = -c(2.60,0.15)
                         , extent = attr(elev_img, "extent")
                         , fonttype = "standard"
                         , text = tmp_stops1[,.SD[1],by = trip_number]$text_plot
@@ -335,10 +336,10 @@ rayshader::render_label(heightmap = elev_img
                         , long = tmp_stops1[,.SD[.N],by = trip_number]$X
                         , altitude = tmp_stops1[,.SD[.N],by = trip_number]$new_scale_altitude
                         , zscale = 100
-                        , textsize = 1.5
+                        , textsize = 2.5
                         , linewidth = 0
                         , alpha = 0
-                        , adjustvec = c(4.5,0.5)
+                        , adjustvec = c(3.625,0.25)
                         , extent = attr(elev_img, "extent")
                         , fonttype = "standard"
                         , text = tmp_stops1[,.SD[.N],by = trip_number]$text_plot
@@ -346,6 +347,6 @@ rayshader::render_label(heightmap = elev_img
 
 # 6) saving----
 dir.create("snaps")
-rayshader::render_snapshot(filename = "snaps/12_sunday.png"
-                           ,width = 2000
+rayshader::render_snapshot(filename = "snaps/12_monday.png"
+                           ,width = 1000
                            ,height = 2000)
