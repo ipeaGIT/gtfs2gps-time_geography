@@ -10,22 +10,25 @@ library(mapview)
 library(magick)
 library(data.table)
 
+# 1) Download Sao Paulo shapefile ------
+spo_bound <- geobr::read_municipality(3550308,simplified = FALSE)
+spo_bound <- sf::st_transform(spo_bound,4326)
+readr::write_rds(spo_bound,"data/spo_bound.rds")
 
+# 1) PREP DATA FOR SPATIAL PLOTS ------
 # saving gtfs monday
-sp_gtfs_raw <- gtfstools::read_gtfs("data/gtfs_spo_emtu_2019-10.zip")
+sp_gtfs_raw <- gtfstools::read_gtfs("L://Proj_acess_oport/data-raw/gtfs/spo/2019/gtfs_spo_emtu_2019-10.zip")
 
+# add shape_id info on stop_times
 sp_gtfs_raw$stop_times[sp_gtfs_raw$trips,on = "trip_id",shape_id := i.shape_id]
 
-sp_gtfs <- sp_gtfs_raw %>%  gtfs2gps::filter_by_shape_id("423032_ida")
+sp_gtfs <- gtfstools::filter_by_shape_id(sp_gtfs_raw,"423032_ida")
+
 gtfs2gps::write_gtfs(sp_gtfs,"data/gtfs_spo_emtu_2019-10_423032_ida.zip")
 
 # saving file '51007'
-unique(sp_gtfs_raw$shapes$shape_id)[unique(sp_gtfs_raw$shapes$shape_id) %like% "ida"] %>% head()
-shape_id <- gtfstools::convert_shapes_to_sf(sp_gtfs_raw,"423032_ida")
-mapview(shape_id)
-
 tmp_shape_id <- sp_gtfs_raw %>% 
-  gtfs2gps::filter_by_shape_id("423032_ida") %>% 
+  gtfstools::filter_by_shape_id("423032_ida") %>% 
   gtfs2gps::filter_single_trip() 
 
 tmp_shape_id$stop_times[,arrival_time := data.table::as.ITime(arrival_time)]

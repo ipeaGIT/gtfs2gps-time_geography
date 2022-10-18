@@ -45,9 +45,10 @@ sp_gps_2 <- gtfs2gps::gtfs2gps(tmp_gtfs)
 
 time_start = "05:00:00"
 time_end = "10:00:00"
+myday <- "monday"
 
 gps_dt <- rbind(sp_gps_1[,day := "monday"], sp_gps_2[,day := "sunday"]) %>% 
-  .[day == "monday"] %>% 
+  .[day == myday,] %>% 
   .[!is.na(timestamp)] %>% 
   .[,timestamp := data.table::as.ITime(timestamp)] %>% 
   .[,timestart := timestamp[1],by = .(trip_number,day)] %>% 

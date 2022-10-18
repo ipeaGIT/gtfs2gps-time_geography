@@ -315,6 +315,7 @@ rayshader::render_label(heightmap = elev_img
                         , text = tmp_stops1[shape_id == "540298_ida",.SD[.N]]$text_plot
                         , clear_previous = F)
 
+# save ----
 dir.create("snaps")
 rayshader::render_snapshot(filename = "snaps/intersection_emtu.png"
                            ,width = 500

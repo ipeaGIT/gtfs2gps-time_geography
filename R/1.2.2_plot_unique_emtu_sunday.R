@@ -18,38 +18,26 @@ library(data.table)
 
 #  2) READ gps ----
 
-# sp_gtfs <- gtfs2gps::read_gtfs("data/gtfs_spo_emtu_2019-10.zip") %>%
-#   gtfs2gps::filter_by_shape_id("423032_ida")
-# gtfs2gps::write_gtfs(sp_gtfs,"data/gtfs_spo_emtu_2019-10_423032_ida.zip")
-
-sp_gtfs <- gtfs2gps::read_gtfs("data/gtfs_spo_emtu_2019-10_423032_ida.zip")
-
-sp_gtfs$trips[,.N,by =.(shape_id,service_id)]
-sp_gtfs$calendar
-sp_gtfs$calendar_dates
-
-tmp_gtfs <- sp_gtfs %>% 
-  gtfs2gps::filter_by_day("monday")
-
-tmp_gtfs$calendar
-tmp_gtfs$trips <- tmp_gtfs$trips[service_id == 0 ]
-
-sp_gps_1 <- gtfs2gps::gtfs2gps(tmp_gtfs)
-
+sp_gtfs <- gtfstools::read_gtfs("data/gtfs_spo_emtu_2019-10_423032_ida.zip")
 
 # sunday
-tmp_gtfs <- sp_gtfs %>% gtfs2gps::filter_by_day("sunday")
-tmp_gtfs$calendar
-tmp_gtfs$trips <- tmp_gtfs$trips[service_id == 2]
+tmp_gtfs_1 <- gtfstools::filter_by_weekday( sp_gtfs,"sunday")
+tmp_gtfs_2 <- gtfstools::filter_by_weekday( sp_gtfs,"monday")
 
-sp_gps_2 <- gtfs2gps::gtfs2gps(tmp_gtfs)
+# apply function
+sp_gps_1 <- gtfs2gps::gtfs2gps(tmp_gtfs_1)
+sp_gps_2 <- gtfs2gps::gtfs2gps(tmp_gtfs_2)
 
 
+# define time windown
 time_start = "05:00:00"
 time_end = "10:00:00"
 
+# choose day
+myday <- "sunday"
+
 gps_dt <- rbind(sp_gps_1[,day := "monday"], sp_gps_2[,day := "sunday"]) %>% 
-  .[day == "monday"] %>% 
+  .[day == myday] %>% 
   .[!is.na(timestamp)] %>% 
   .[,timestamp := data.table::as.ITime(timestamp)] %>% 
   .[,timestart := timestamp[1],by = .(trip_number,day)] %>% 
@@ -58,27 +46,6 @@ gps_dt <- rbind(sp_gps_1[,day := "monday"], sp_gps_2[,day := "sunday"]) %>%
   .[timeend > timestart,]
 
 gps_dt[,.N,by=day]
-# gps_dt
-# 
-# gps_line <- sfheaders::sf_linestring(obj = gps_dt,x = "shape_pt_lon",y = "shape_pt_lat"
-#                                      ,linestring_id = "trip_number",keep = FALSE) %>%
-#   sf::st_set_crs(4326)
-# 
-# mapview(gps_line$geometry)
-# 
-# gps_int <- sf::st_intersects(gps_line,sparse = FALSE)
-# 
-# shape_inter1 <- unique(gps_line$shape_id)[gps_int[1,]]
-# shape_path1 <- sprintf("bra_spo/%s.rds",shape_inter1)
-
-#gps <- gps_dt[shape_id %in% shape_inter1[1:10]]
-#readr::write_rds(gps,"sample_sp.rds")
-# 
-#gps <- readr::read_rds(filepath_sp[6])
-#gps <- readr::read_rds("45818.rds")
-# gps <- readr::read_rds("sample_sp.rds")
-#gps <- readr::read_rds("bra_spo//51007.rds")
-# deal with midnight trips
 
 tmp_gps <- data.table::copy(gps_dt) %>%
   .[,time := as.numeric(timestamp)]  %>%
@@ -134,6 +101,7 @@ osm_bbox = tmp_gps_bbox %>% raster::extent() %>%
 view_osm_bbox <- sf::st_bbox(tmp_gps_bbox) %>% 
   mapview()
 
+view_osm_bbox
 # * read tile -----
 ggmap::file_drawer()
 dir(file_drawer())
@@ -149,8 +117,8 @@ ggmap::file_drawer()
 
 
 view_osm_bbox+view_tmp_stops
-# 3) READ topography ----
 
+# 3) READ topography ----
 # 3.1) crop ----
 
 elev_img <- raster::raster("data/topografia3_spo.tif")
@@ -209,8 +177,8 @@ plot_gg(list_plot, height = nrow(base_map)/200
         , theta = 269.911531, phi = 11.972998
         ,  max_error = 0.001, verbose = TRUE) 
 
-rayshader::render_camera()
-rayshader::ren
+#  rayshader::render_camera()
+
 scale_altitude <- 5
 tmp_gps1 <- data.table::copy(tmp_gps)
 tmp_gps1[, new_scale_altitude := ( time - min(time)) * scale_altitude]
@@ -237,7 +205,9 @@ for(i in seq_along(unique_shape_id)){# i = unique(tmp_gps$shape_id)[1]
     
   }
 }
+
 ### 2 downrender
+
 for(i in seq_along(unique_shape_id)){# i = unique(tmp_gps1$shape_id)[1]
   
   unique_trip_id <- unique(tmp_gps1[shape_id == unique_shape_id[i]]$trip_number)
@@ -257,6 +227,7 @@ for(i in seq_along(unique_shape_id)){# i = unique(tmp_gps1$shape_id)[1]
     
   }
 }
+
 # tmp_stops[day == "monday", new_scale_altitude := ( time - min(time) ) * scale_altitude]
 tmp_stops_id <- data.table::copy(tmp_stops) %>% 
   .[shape_id %in% unique(tmp_gps1$shape_id)] %>% 
