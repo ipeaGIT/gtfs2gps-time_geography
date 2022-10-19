@@ -15,7 +15,7 @@ This repository contains the R scripts used to produce the figures and other res
 
 Space-time path of a single public transport trip in São Paulo, Brazil
 
-<img align="left" src="figures/emtu_first_plot.png?raw=true" alt="logo" width="720">  <br />
+<img align="left" src="figures/emtu_first_plot.png?raw=true" alt="logo" width="720">  <br /><br /><br />
 
 ### * `R/1.2.1_plot_emtu_monday.R`  <br />
 
