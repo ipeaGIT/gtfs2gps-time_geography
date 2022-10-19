@@ -1,13 +1,15 @@
-# load ----
+# Load ----
+
 rm(list=ls())
 gc(reset = TRUE)
-library(magrittr)
-library(sf)
-library(ggplot2)
-library(gtfstools)
-library(gtfs2gps) # devtools::install_github("ipeaGIT/gtfs2gps")
-library(data.table)
-library(mapview)
+
+# install.packages('easypackages')
+easypackages::packages('geobr'
+                       , 'gtfs2gps'
+                       , 'data.table'
+                       , 'magrittr'
+                       , 'ggplot2'
+                       , 'rayshader')
 
 
 # 1) GPS filter ------
@@ -20,7 +22,7 @@ emtu_path <- "../../data-raw/gtfs/spo/2019/gtfs_spo_emtu_2019-06.zip"
 emtu_gtfs <- gtfstools::read_gtfs(path = emtu_path)
 emtu_gtfs <- gtfstools::filter_by_weekday(emtu_gtfs,"wednesday")
 
-# gtfs2gps (1 approach)
+# gtfs2gps 
 dir.create("data/gps/")
 dir.create("data/gps/emtu")
 gtfs2gps::gtfs2gps(gtfs_data = emtu_gtfs
@@ -28,36 +30,18 @@ gtfs2gps::gtfs2gps(gtfs_data = emtu_gtfs
                    ,ncores = 35
                    ,filepath = "data/gps/emtu/")
 
-# gtfstools (2 approach)
-#emtu_stops <- emtu_gtfs$stop_times
-#emtu_stops <- emtu_stops[emtu_gtfs$stops, on = "stop_id"
-#                         ,":="(
-#                           stop_lat = i.stop_lat,
-#                           stop_lon = i.stop_lon
-#                         )]
-#emtu_stops[,source := "EMTU"]
-#emtu_stops[,shape_dist_traveled  := NULL]
-
 # sptrans
 sptr_path <- "../../data-raw/gtfs/spo/2019/gtfs_spo_sptrans_2019-06.zip"
 sptr_gtfs <- gtfstools::read_gtfs(sptr_path)
 sptr_gtfs <- gtfstools::frequencies_to_stop_times(sptr_gtfs)
 sptr_gtfs <- gtfstools::filter_by_weekday(sptr_gtfs,"wednesday")
 
-# gtfs2gps (1 approach)
+# gtfs2gps 
 dir.create("data/gps/sptrans")
 gtfs2gps::gtfs2gps(gtfs_data = sptr_gtfs
                    ,parallel = TRUE
                    ,ncores = 35
                    ,filepath = "data/gps/sptrans/")
-
-#sptr_stops <- sptr_gtfs$stop_times
-#sptr_stops <- sptr_stops[sptr_gtfs$stops, on = "stop_id"
-#                         ,":="(
-#                           stop_lat = i.stop_lat,
-#                           stop_lon = i.stop_lon
-#                         )]
-#sptr_stops[,source := "SPTRANS"]
 
 # 2) Rbind -----
 ## sptrans-----
@@ -93,7 +77,7 @@ rbind_stops[,stop_id := as.character(stop_id)]
 ## Find bus stops inside SP -----
 
 # total bus stop_ids 
-uniqueN(rbind_stops$stop_id) # [1] 69967
+uniqueN(rbind_stops$stop_id) 
 
 unique_stops_sf <- sfheaders::sf_multipoint(
   obj = rbind_stops[,.SD[1],by = .(stop_id)]
@@ -108,7 +92,7 @@ tmp_id <- sf::st_within(x = unique_stops_sf
                         ,sparse = FALSE)
 
 # total stops inside SP
-sum(tmp_id) # 29125 #28878
+sum(tmp_id) # 28878
 
 unique_stops <- unique_stops_sf[which(tmp_id),]$stop_id
 unique_stops <- as.character(unique_stops)
@@ -124,8 +108,7 @@ gc(reset = TRUE)
 
 rbind_stops <- readr::read_rds("data/rbind_stops_sp.rds")
 
-
-
+# adjust time
 rbind_stops[,time_to_sec := gtfstools:::cpp_time_to_seconds(timestamp)]
 rbind_stops[,minu_time := round(time_to_sec/60,1)]
 
@@ -336,7 +319,6 @@ list_plots <- lapply(seq_along(vec),function(i){ # i = 4
   tmp <- rbind_stops[total_pop > 0 &
                        time_interval == vec[i] & 
                        !is.na(time ),] %>% 
-   #  .[,sum(N),by = .(time,decil_ind )] %>%  # antes
     .[,weighted.mean(N,total_pop),by = .(time,decil_ind )]   # depois
   
   fixed_time <- c("00:00","04:00","08:00","12:00","16:00","20:00","23:00")
@@ -364,14 +346,11 @@ library(patchwork)
 list_plots[[4]]
 
 # rayshader ----
-library(rayshader)
-
 future::plan("multisession", workers = 19)
 
 tmp <- rbind_stops[total_pop > 0 &
                      time_interval == "10 min" & 
                      !is.na(time ),] %>% 
-  #.[,sum(N),by = .(time,decil_ind )] %>%  # antes
   .[,weighted.mean(N,total_pop),by = .(time,decil_ind )]   # depois
 
 fixed_time <- c("00:00","04:00","08:00","12:00","16:00","20:00","23:00")
@@ -402,7 +381,6 @@ ggplot2::ggsave(plot
 rayshader::plot_gg(ggobj = plot
                    , multicore = TRUE
                    , width = 5
-                  # , height_aes = 1
                    , height = 5
                    , scale = 250
                    , windowsize = c(1400,866)
@@ -410,65 +388,10 @@ rayshader::plot_gg(ggobj = plot
                    , phi = 30.4472961      
                    , theta = -23.2254651    )
 
-#rayshader::render_camera(theta = NULL,phi = NULL,zoom = NULL,fov = NULL)
+# find angle view
+# rayshader::render_camera(theta = NULL,phi = NULL,zoom = NULL,fov = NULL)
 rayshader::render_snapshot(filename = "figures/10min_freq_3d_rayshader.png"
                            ,width = 1000
                            ,height = 1000
                            )
-# rayshader 2 ------
-p1 <- rayshader::plot_gg(ggobj = plot
-                   , multicore = TRUE
-                   , width = 5
-                   , height = 5
-                   #, shadow_intensity = 1
-                   , save_height_matrix = TRUE
-                   , scale = 250
-                   , windowsize = c(1400,866)
-                   , zoom = 0.5391094   
-                   , phi = 30.4472961      
-                   , theta = -23.2254651    )
-p1
- rayshader::plot_gg(ggobj = plot
-                         , multicore = TRUE
-                         , width = 5
-                         , height = 5
-                         , height_aes = -8
-                         , scale = 250
-                         , windowsize = c(1400,866)
-                         , zoom = 0.5391094   
-                         , phi = 30.4472961      
-                         , theta = -23.2254651    )
 
-p2
-p3 <- list(p1,p2)
-plot_gg(ggobj = p3
-       # , height = nrow(p1)/100
-       # , width = ncol(p1)/100
-        , scale = 100
-        , raytrace = FALSE
-        , windowsize = c(1200, 1200)
-        , fov = 70.000000
-        , zoom = 0.4327136 
-        , theta = 269.911531
-        , phi = 11.972998
-        , max_error = 0.001
-        , verbose = TRUE) 
-
-# rigdline -----
-library(ggridges)
-
-ggplot(tmp,aes(x = time,y= as.factor(decil_ind),fill = V1))+
-  geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01)
-  geom_density_ridges(scale = 1)#+
-  scale_x_discrete(breaks = fixed_time,labels = fixed_time)+
-  coord_cartesian(expand = FALSE)+
-  labs(title = NULL
-       ,x = NULL
-       ,y = "Income decile")+
-  scale_fill_continuous(type = "viridis",direction = -1)+
-  theme(axis.text.x = element_text(angle = 0))+
-  guides(fill = guide_colourbar(
-    title = "Mean frequency\nof vehicles at\npublic transport\nstops by every\n10 min."
-    ,title.position = "bottom"
-    ,label.position = "left"))
-# End ----
