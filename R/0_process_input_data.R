@@ -2,22 +2,28 @@
 
 rm(list=ls())
 gc(reset = TRUE)
-library(magrittr)
-library(sf)
-library(ggplot2)
-library(gtfs2gps) # devtools::install_github("ipeaGIT/gtfs2gps")
-library(mapview)
-library(magick)
-library(data.table)
+install.packages('easypackages')
+easypackages::packages('geobr', 'magick', 'gtfs2gps', 
+                       'data.table', 'sf', 'mapview',
+                       'magrittr', 'dplyr', 'ggnewscale',
+                       'ggplot2', 'httr',)
+
 
 # 1) Download Sao Paulo shapefile ------
-spo_bound <- geobr::read_municipality(3550308,simplified = FALSE)
-spo_bound <- sf::st_transform(spo_bound,4326)
+spo_bound <- geobr::read_municipality(3550308, simplified = FALSE)
+spo_bound <- sf::st_transform(spo_bound, 4326)
 readr::write_rds(spo_bound,"data/spo_bound.rds")
 
 # 1) PREP DATA FOR SPATIAL PLOTS ------
-# saving gtfs monday
-sp_gtfs_raw <- gtfstools::read_gtfs("L://Proj_acess_oport/data-raw/gtfs/spo/2019/gtfs_spo_emtu_2019-10.zip")
+# download gtfs to tempfie
+gtfs_path <- tempfile("gtfs", fileext = ".zip")
+httr::GET(
+  "https://github.com/ipeaGIT/gtfs2gps-time_geography/files/9814228/gtfs_spo_sptrans_2019-06.zip",
+  httr::write_disk(gtfs_path)
+)
+
+# read gtfs data
+sp_gtfs_raw <- gtfstools::read_gtfs(gtfs_path)
 
 # add shape_id info on stop_times
 sp_gtfs_raw$stop_times[sp_gtfs_raw$trips,on = "trip_id",shape_id := i.shape_id]
