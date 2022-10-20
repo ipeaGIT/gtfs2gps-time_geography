@@ -42,4 +42,4 @@ Bundling of space-time paths of routes/trips that arrive at a selected bus stop 
 <img align="center" src="figures/10min_freq_3d_rayshader.png?raw=true" alt="logo" width="400"> 
 
 # Corresponding author. <br />
-E-mail address: rafael [dot] pereira [at] ipea [dot] gov [dot] br
+E-mail address: rafael.pereira@ipea.gov.br
