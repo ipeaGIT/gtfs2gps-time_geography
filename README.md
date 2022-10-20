@@ -19,27 +19,27 @@ Space-time path of a single public transport trip in São Paulo, Brazil
 
 A - Space-time paths of multiple trips of a public transport route between 5 am and 10 am in São Paulo, Brazil. <br />
 
-<img align="center" src="figures/12_monday.png?raw=true" alt="logo" width="600"> 
+<img align="center" src="figures/12_monday.png?raw=true" alt="logo" width="400"> 
 
 ### *`R/1.2.2_plot_emtu_sunday.R`  <br />
 
 B - Space-time paths of multiple trips of a public transport route between 5 am and 10 am in São Paulo, Brazil. <br />
 
-<img align="center" src="figures/12_sunday.png?raw=true" alt="logo" width="600"> 
+<img align="center" src="figures/12_sunday.png?raw=true" alt="logo" width="400"> 
 
 ### *`R/1.1_plot_trips_intersection.R` <br />
 
 Bundling of space-time paths of routes/trips that arrive at a selected bus stop within a 10-minute window. São Paulo, Brazil. <br />
 
-<img align="center" src="figures/intersection_emtu.png?raw=true" alt="logo" width="600"> 
+<img align="center" src="figures/intersection_emtu.png?raw=true" alt="logo" width="400"> 
 
 ### *`R/1.3_plot_vehicle_frequency.R` <br />
 
 2D and 3D representation of the average frequency of public transport services in regions of different income levels across different times of the day, São Paulo, 2019. <br />
 
-<img align="center" src="figures/10min_freq_2d.png?raw=true" alt="logo" width="600"> 
+<img align="center" src="figures/10min_freq_2d.png?raw=true" alt="logo" width="400"> 
 
-<img align="center" src="figures/10min_freq_3d_rayshader.png?raw=true" alt="logo" width="600"> 
+<img align="center" src="figures/10min_freq_3d_rayshader.png?raw=true" alt="logo" width="400"> 
 
 # Corresponding author. <br />
 E-mail address: rafael [dot] pereira [at] ipea [dot] gov [dot] br
