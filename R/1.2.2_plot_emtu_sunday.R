@@ -2,8 +2,6 @@
 
 rm(list=ls())
 gc(reset = TRUE)
-
-install.packages('easypackages')
 easypackages::packages('geobr'
                        , 'magick'
                        , 'gtfs2gps'
@@ -19,8 +17,7 @@ easypackages::packages('geobr'
                        , 'rayimage'
                        , 'ggmap'
                        , 'raster'
-                       , 'magick'
-                       , 'httr')
+                       , 'magick')
 
 
 #  READ gps ----
