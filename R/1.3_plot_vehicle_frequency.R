@@ -9,7 +9,10 @@ easypackages::packages('geobr'
                        , 'data.table'
                        , 'magrittr'
                        , 'ggplot2'
-                       , 'rayshader')
+                       , 'rayshader'
+                       , 'progressr'
+                       , 'pbapply'
+                       , 'aopdata')
 
 
 # 1) GPS filter ------
@@ -18,61 +21,71 @@ easypackages::packages('geobr'
 spo_bound <- readr::read_rds("data/spo_bound.rds")
 
 # emtu
-emtu_path <- "../../data-raw/gtfs/spo/2019/gtfs_spo_emtu_2019-06.zip"
+emtu_path <- "./data-raw/gtfs_spo_emtu_2019-06.zip"
 emtu_gtfs <- gtfstools::read_gtfs(path = emtu_path)
 emtu_gtfs <- gtfstools::filter_by_weekday(emtu_gtfs,"wednesday")
 
 # gtfs2gps 
 dir.create("data/gps/")
 dir.create("data/gps/emtu")
-gtfs2gps::gtfs2gps(gtfs_data = emtu_gtfs
-                   ,parallel = TRUE
-                   ,ncores = 35
-                   ,filepath = "data/gps/emtu/")
+
+progressr::with_progress(
+  gtfs2gps::gtfs2gps(gtfs_data = emtu_gtfs,
+                     parallel = TRUE,
+                     filepath = "data/gps/emtu/")
+  )
 
 # sptrans
-sptr_path <- "../../data-raw/gtfs/spo/2019/gtfs_spo_sptrans_2019-06.zip"
+sptr_path <- "./data-raw/gtfs_spo_sptrans_2019-06.zip"
 sptr_gtfs <- gtfstools::read_gtfs(sptr_path)
 sptr_gtfs <- gtfstools::frequencies_to_stop_times(sptr_gtfs)
 sptr_gtfs <- gtfstools::filter_by_weekday(sptr_gtfs,"wednesday")
 
 # gtfs2gps 
 dir.create("data/gps/sptrans")
-gtfs2gps::gtfs2gps(gtfs_data = sptr_gtfs
-                   ,parallel = TRUE
-                   ,ncores = 35
-                   ,filepath = "data/gps/sptrans/")
+progressr::with_progress(
+gtfs2gps::gtfs2gps(gtfs_data = sptr_gtfs,
+                   parallel = TRUE,
+                   filepath = "data/gps/sptrans/",
+                   continue = T
+                   )
+  )
+
+
+
 
 # 2) Rbind -----
 ## sptrans-----
 sptrans_files <- list.files ("data/gps/sptrans/",full.names = TRUE)
-sptrans_stops <- lapply(sptrans_files,function(i){
+sptrans_stops <- pblapply(sptrans_files,function(i){
   # i = sptrans_files[1]
-  tmp <- data.table::fread(i)
+  tmp <- data.table::fread(i, select = c('shape_id','trip_id','stop_id',
+                                         'timestamp', 'dist',
+                                         'shape_pt_lat', 'shape_pt_lon'))
   tmp <- tmp[!is.na(stop_id) & dist != 0]
-  tmp <- tmp[,.SD,.SDcols = c('shape_id','trip_id','stop_id',
-                              'timestamp',
-                               'shape_pt_lat', 'shape_pt_lon')]
   return(tmp)
 
   }) %>% data.table::rbindlist()
 
 ## emtu -----
 emtu_files <- list.files ("data/gps/emtu/",full.names = TRUE)
-emtu_stops <- lapply(emtu_files,function(i){
+emtu_stops <- pblapply(emtu_files,function(i){
   # i = emtu_files[1]
-  tmp <- data.table::fread(i)
+  tmp <- data.table::fread(i, select = c('shape_id','trip_id','stop_id',
+                                         'timestamp', 'dist',
+                                         'shape_pt_lat', 'shape_pt_lon'))
   tmp <- tmp[!is.na(stop_id) & dist != 0]
-  tmp <- tmp[,.SD,.SDcols = c('shape_id','trip_id','stop_id',
-                              'timestamp',
-                              'shape_pt_lat', 'shape_pt_lon')]
   return(tmp)
   
 }) %>% data.table::rbindlist()
 
+
 ## Rbind GPS ----
-rbind_stops <- rbind(emtu_stops[,source := "EMTU"],sptrans_stops[,source := "SPTRANS"])
-rbind_stops[,stop_id := as.character(stop_id)]
+emtu_stops[,source := "EMTU"]
+sptrans_stops[,source := "SPTRANS"]
+
+rbind_stops <- rbind(emtu_stops, sptrans_stops)
+rbind_stops[, stop_id := as.character(stop_id)]
 
 ## Find bus stops inside SP -----
 
@@ -85,6 +98,7 @@ unique_stops_sf <- sfheaders::sf_multipoint(
   ,y = "shape_pt_lat"
   ,multipoint_id = "stop_id"
   ,keep = FALSE)
+
 unique_stops_sf <- sf::st_set_crs(unique_stops_sf,4326)
 
 tmp_id <- sf::st_within(x = unique_stops_sf
@@ -225,8 +239,8 @@ setDT(stops_sf)
 
 stops_sf <- stops_sf[,.SD,.SDcols = c("stop_id","hex_id")]
 
-# 3) alocar info do hexagono ----
 
+# 3) alocar info do hexagono ----
 
 rbind_stops[stops_sf, on = "stop_id",hex_id := i.hex_id]
 
@@ -262,7 +276,11 @@ readr::write_rds(x = rbind_stops_sf
                  ,file = "data/hex_freq_sf.rds"
                  ,compress = "gz")
 
-# 4.1) values for article ----
+
+
+
+# 4.1) values for article -----------------------------
+
 rm(list=ls())
 gc(reset = TRUE)
 
@@ -274,7 +292,7 @@ tmp <- rbind_stops[time_interval == "60 min",] %>%
   .[time %in% c("06:00","07:00","08:00"),peak := "Morning"] %>% 
   .[!is.na(peak),] %>% 
   .[,decil_class := fcase(decil_ind %in% 9:10,"20p_richest"
-                          , decil_ind %in% 1:8,"80p_poorest")] %>% 
+                          , decil_ind %in% 1:5,"50p_poorest")] %>% 
   .[!is.na(decil_class),] %>% 
   .[,list("N_vehicles" = sum(N), "N_hex" = .N, "Minutes" = 180),by = .(peak,decil_class)]
 
@@ -282,6 +300,9 @@ tmp[,vehicles_by_hex_by_minute := N_vehicles / (N_hex * Minutes)]
 tmp[,vehicles_by_hex := N_vehicles / (N_hex )]
 tmp[,prop_vehicles_by_hex := round(100 * vehicles_by_hex / min(vehicles_by_hex))]
 tmp[]
+
+tmp[decil_class == '20p_richest']$vehicles_by_hex / tmp[decil_class == '50p_poorest']$vehicles_by_hex 
+#> 4839.267 / 3225.112 = 1.500496
 
 # check mean in morning peak by income group
 tmp <- rbind_stops[time_interval == "05 min",] %>% 
@@ -291,7 +312,7 @@ tmp <- rbind_stops[time_interval == "05 min",] %>%
   .[,minute :=  stringr::str_split(time,":",n = 2,simplify = TRUE)[2],by = .(id_hex,time)] %>% 
   .[,time_minute := as.numeric(hour) * 60 + as.numeric(minute)] %>% 
   .[,decil_class := fcase(decil_ind %in% 9:10,"20p_richest"
-                          , decil_ind %in% 1:8,"80p_poorest")] %>% 
+                          , decil_ind %in% 1:5,"50p_poorest")] %>% 
   .[!is.na(decil_class),]
 
 tmp <- tmp[,weighted.mean(x = time_minute,w = N),by = .(decil_class)]
@@ -301,6 +322,7 @@ tmp[,minute := (V1 - hour*60)]
 tmp[,time := paste0(hour,":",round(minute,0))]
 tmp[]
 
+tmp[decil_class == '20p_richest']$vehicles_by_hex / tmp[decil_class == '50p_poorest']$vehicles_by_hex 
 
 
 # 5) Plots ----
