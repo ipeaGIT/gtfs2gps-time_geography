@@ -1,19 +1,15 @@
 # Load and read----
 
+
+# load libraries
 rm(list=ls())
 gc(reset = TRUE)
-library(rayshader)
-library(rayrender)
-library(rayimage)
-library(magrittr)
-library(sf)
-library(ggplot2)
-library(ggmap)
-library(raster)
-library(mapview)
-library(magick)
-library(terra)
-library(data.table)
+easypackages::packages('geobr', 'magick', 'gtfs2gps', 
+                       'data.table', 'sf', 'mapview', 'progressr',
+                       'magrittr', 'dplyr', 'ggnewscale',
+                       'ggplot2', 'ggmap', 'raster', 'terra',
+                       'rayshader', 'rayrender', 'rayimage')
+
 
 
 gps_dt <- readr::read_rds("data/emtu_intersection_gps.rds")
