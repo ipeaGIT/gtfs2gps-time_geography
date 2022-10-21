@@ -1,25 +1,15 @@
 # Load ----
 
+# load libraries
 rm(list=ls())
 gc(reset = TRUE)
-install.packages('easypackages')
-easypackages::packages('geobr'
-                       , 'magick'
-                       , 'gtfs2gps'
-                       , 'data.table'
-                       , 'sf'
-                       , 'mapview'
-                       , 'magrittr'
-                       , 'dplyr'
-                       , 'ggnewscale'
-                       , 'ggplot2'
-                       , 'rayshader'
-                       , 'rayrender'
-                       , 'rayimage'
-                       , 'ggmap'
-                       , 'raster'
-                       , 'magick'
-                       , 'httr')
+easypackages::packages('geobr', 'magick', 'gtfs2gps', 
+                       'data.table', 'sf', 'mapview', 'progressr',
+                       'magrittr', 'dplyr', 'ggnewscale',
+                       'ggplot2', 'ggmap', 'raster', 'terra',
+                       'rayshader', 'rayrender', 'rayimage')
+
+
 
 
 #  READ gps ----
@@ -28,7 +18,9 @@ sp_gtfs <- gtfstools::read_gtfs("data/gtfs_spo_emtu_2019-06_423032_ida.zip")
 
 # sunday
 tmp_gtfs <- gtfstools::filter_by_weekday( sp_gtfs,"monday")
-sp_gps <- gtfs2gps::gtfs2gps(tmp_gtfs)
+sp_gps <- progressr::with_progress( 
+  gtfs2gps::gtfs2gps(tmp_gtfs) 
+  )
 
 # define time windown
 time_start = "05:00:00"
@@ -104,6 +96,7 @@ view_osm_bbox <- sf::st_bbox(tmp_gps_bbox) %>%
   mapview()
 
 view_osm_bbox
+
 # read tile -----
 ggmap::file_drawer()
 dir(file_drawer())
