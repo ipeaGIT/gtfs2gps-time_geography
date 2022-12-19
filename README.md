@@ -1,5 +1,9 @@
 ### Exploring the time geography of public transport networks with the gtfs2gps package
 
+**Paper**:
+- Pereira, R. H. M., Andrade, P. R., & Vieira, J. P. B. (2022). Exploring the time geography of public transport networks with the gtfs2gps package. *Journal of Geographical Systems*. [https://doi.org/10.1007/s10109-022-00400-x](https://doi.org/10.1007/s10109-022-00400-x)
+
+**Preprint**
 - Pereira, R. H. M., Andrade, P. R., & Bazzo Vieira, J. P. (2022). Exploring the time geography of public transport networks with the gtfs2gps package. SocArXiv Preprint [https://doi.org/10.31235/osf.io/qydr6](https://doi.org/10.31235/osf.io/qydr6)
 
 
